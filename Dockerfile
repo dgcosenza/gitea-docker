@@ -50,6 +50,7 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
       bash ca-certificates curl gettext-base git gnupg openssh-server \
       passwd procps sqlite3 tini tzdata util-linux wget; \
+    rm -f /etc/ssh/ssh_host_*; \
     groupadd --gid 1000 git; \
     useradd --uid 1000 --gid 1000 --no-create-home --home-dir /data/git \
       --shell /bin/bash --comment 'Gitea service account' git; \
