@@ -46,7 +46,7 @@ for _ in $(seq 1 45); do
     exit 1
   fi
   HEALTH="$(docker exec "$NAME" wget -q -O - http://127.0.0.1:3000/api/healthz 2>/dev/null || true)"
-  if printf '%s' "$HEALTH" | grep -q '"status":"pass"'; then
+  if printf '%s' "$HEALTH" | grep -qE '"status"[[:space:]]*:[[:space:]]*"pass"'; then
     READY=1
     break
   fi
