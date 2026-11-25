@@ -1,13 +1,16 @@
 # syntax=docker/dockerfile:1.7
 
+ARG GO_BASE=golang:1.27.4-trixie@sha256:430985542100b871e108ccc00e8dcc5eef08ca14ee5825e98ebf563d8ffec4ee
+ARG DEBIAN_BASE=debian:trixie-slim@sha256:8aa5a7bf5a1955bddbe7d74fcdd0b91ab30e74362a8b73af672b0481b35b44a0
 ARG GO_VERSION=1.27.4
-ARG DEBIAN_BASE=debian:trixie-slim
 ARG GITEA_VERSION=28.4.0
 
 # ---- Stage 1: build static environment-to-ini helper & fetch SHA-256 verified Gitea binary ----
-FROM golang:${GO_VERSION}-trixie AS builder
+FROM ${GO_BASE} AS builder
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG GITEA_VERSION
+ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
@@ -17,14 +20,15 @@ RUN apt-get update \
 
 WORKDIR /src/env2ini
 COPY tools/environment-to-ini/ ./
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local \
-    go build -trimpath -ldflags="-s -w" -o /out/environment-to-ini ./main.go
 
-# Download official upstream Gitea Linux amd64 release binary and verify SHA-256 checksum
+# Build static helper and download official SHA-256-verified Gitea binary for TARGETARCH
 RUN set -eux; \
+    ARCH="${TARGETARCH:-amd64}"; \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${ARCH}" GOTOOLCHAIN=local \
+      go build -trimpath -ldflags="-s -w" -o /out/environment-to-ini ./main.go; \
     BASE="https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}"; \
-    curl -fsSLo /out/gitea "${BASE}/gitea-${GITEA_VERSION}-linux-amd64"; \
-    curl -fsSLo /tmp/gitea.sha256 "${BASE}/gitea-${GITEA_VERSION}-linux-amd64.sha256"; \
+    curl -fsSLo /out/gitea "${BASE}/gitea-${GITEA_VERSION}-linux-${ARCH}"; \
+    curl -fsSLo /tmp/gitea.sha256 "${BASE}/gitea-${GITEA_VERSION}-linux-${ARCH}.sha256"; \
     EXPECTED="$(awk '{print $1}' /tmp/gitea.sha256)"; \
     echo "${EXPECTED}  /out/gitea" | sha256sum -c -; \
     chmod 0755 /out/gitea /out/environment-to-ini; \
@@ -40,26 +44,24 @@ ARG IMAGE_REVISION=""
 ARG IMAGE_SOURCE="https://github.com/dgcosenza/gitea-docker"
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update \
-    && apt-get -y upgrade \
-    && apt-get install -y --no-install-recommends \
-       bash ca-certificates curl gettext-base git gnupg openssh-server \
-       passwd procps sqlite3 tini tzdata util-linux wget \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN set -eux; \
+    apt-get update; \
+    apt-get -y upgrade; \
+    apt-get install -y --no-install-recommends \
+      bash ca-certificates curl gettext-base git gnupg openssh-server \
+      passwd procps sqlite3 tini tzdata util-linux wget; \
+    groupadd --gid 1000 git; \
+    useradd --uid 1000 --gid 1000 --no-create-home --home-dir /data/git \
+      --shell /bin/bash --comment 'Gitea service account' git; \
+    usermod -p '*' git; \
+    mkdir -p /app/gitea /data /etc/templates /run/sshd; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Create default git user/group (UID/GID 1000, unlocked for SSH pubkey auth, reconciled at boot)
-RUN groupadd --gid 1000 git \
-    && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /data/git \
-       --shell /bin/bash --comment 'Gitea service account' git \
-    && usermod -p '*' git \
-    && mkdir -p /app/gitea /data /etc/templates /run/sshd
-
-COPY --from=builder --chown=0:0 /out/gitea /usr/local/bin/gitea
-COPY --from=builder --chown=0:0 /out/environment-to-ini /usr/local/bin/environment-to-ini
+COPY --from=builder --chown=0:0 --chmod=0755 /out/gitea /usr/local/bin/gitea
+COPY --from=builder --chown=0:0 --chmod=0755 /out/environment-to-ini /usr/local/bin/environment-to-ini
 COPY templates/ /etc/templates/
-COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod 0755 /usr/local/bin/gitea /usr/local/bin/environment-to-ini /usr/local/bin/docker-entrypoint.sh
+COPY --chmod=0755 scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 ENV USER=git \
     USER_UID=1000 \
@@ -77,7 +79,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 LABEL org.opencontainers.image.title="Gitea (Debian 13)" \
-      org.opencontainers.image.description="Hardened Debian 13 (trixie-slim) Gitea container with OpenSSH and GITEA__* INI configuration support, maintained by Daniel G. Cosenza from FNX Labs." \
+      org.opencontainers.image.description="Hardened multi-arch Debian 13 (trixie-slim) Gitea container with OpenSSH and GITEA__* INI configuration support, maintained by Daniel G. Cosenza from FNX Labs." \
       org.opencontainers.image.url="https://hub.docker.com/r/dgcosenza/gitea" \
       org.opencontainers.image.source="${IMAGE_SOURCE}" \
       org.opencontainers.image.documentation="${IMAGE_SOURCE}#readme" \

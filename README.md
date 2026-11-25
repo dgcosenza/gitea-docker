@@ -1,12 +1,20 @@
 # Gitea — Hardened Debian 13 (trixie-slim) Image
 
 [![Daily Gitea image](https://github.com/dgcosenza/gitea-docker/actions/workflows/daily.yml/badge.svg)](https://github.com/dgcosenza/gitea-docker/actions/workflows/daily.yml)
+[![Packaging License: MIT](https://img.shields.io/badge/packaging-MIT-blue.svg)](https://github.com/dgcosenza/gitea-docker/blob/main/LICENSE)
+[![Upstream License: MIT](https://img.shields.io/badge/upstream-MIT-green.svg)](https://github.com/go-gitea/gitea/blob/main/LICENSE)
+[![Signed with Cosign](https://img.shields.io/badge/signed-cosign%20OIDC-blueviolet.svg)](#supply-chain-verification)
+[![SLSA Level 3](https://img.shields.io/badge/SLSA-Level%203-brightgreen.svg)](#supply-chain-verification)
+[![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-informational.svg)](#supported-architectures)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dgcosenza/gitea-docker/badge)](https://scorecard.dev/viewer/?uri=github.com/dgcosenza/gitea-docker)
 [![Docker Pulls](https://img.shields.io/docker/pulls/dgcosenza/gitea)](https://hub.docker.com/r/dgcosenza/gitea)
 [![Docker Image Size](https://img.shields.io/docker/image-size/dgcosenza/gitea/latest)](https://hub.docker.com/r/dgcosenza/gitea)
+[![Latest Release](https://img.shields.io/github/v/release/dgcosenza/gitea-docker?label=version)](https://github.com/dgcosenza/gitea-docker/releases)
 
 A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** packaging the official SHA-256-verified Gitea release alongside **OpenSSH**, `git`, `sqlite3`, and `GITEA__*` environment configuration support, maintained by **Daniel G. Cosenza from FNX Labs**.
 
 - **Docker Hub:** [`dgcosenza/gitea`](https://hub.docker.com/r/dgcosenza/gitea)
+- **GitHub Container Registry (GHCR):** [`ghcr.io/dgcosenza/gitea`](https://github.com/dgcosenza/gitea-docker/pkgs/container/gitea) (identical signed multi-arch digest)
 - **Source Repository:** [`dgcosenza/gitea-docker`](https://github.com/dgcosenza/gitea-docker)
 - **Upstream Application:** [`go-gitea/gitea`](https://github.com/go-gitea/gitea) (MIT License)
 - **Packaging License:** MIT (see [`LICENSE`](https://github.com/dgcosenza/gitea-docker/blob/main/LICENSE) and [`THIRD-PARTY-NOTICES.md`](https://github.com/dgcosenza/gitea-docker/blob/main/THIRD-PARTY-NOTICES.md))
@@ -55,10 +63,12 @@ image: dgcosenza/gitea:latest@sha256:<digest>
 
 ## Supported Architectures
 
-| Architecture | Status | Notes |
+| Architecture | Status | Verification |
 | --- | --- | --- |
-| `linux/amd64` | **Published & tested** | Built, smoke-tested, scanned with Trivy and Grype, and published to Docker Hub (`dgcosenza/gitea`). |
+| `linux/amd64` | **Published & natively tested** | Built, smoke-tested, Dive-gated, Syft/Trivy/Grype-scanned, and Cosign-signed on native x86_64 CI runners. |
+| `linux/arm64` | **Published & natively tested** | Built, smoke-tested, Dive-gated, Syft/Trivy/Grype-scanned, and Cosign-signed on native ARM64 CI runners. |
 
+Identical multi-arch OCI manifest digests are published to **Docker Hub** and **GHCR** (`ghcr.io/dgcosenza/*`), accompanied by automated signed [GitHub Releases](https://github.com/dgcosenza/gitea-docker/releases).
 ---
 
 ## Quick Start
@@ -134,6 +144,39 @@ Probes Gitea's `/api/healthz` endpoint and requires `"status":"pass"`.
 
 ---
 
+## Supply-Chain Verification
+
+Every published digest (multi-arch index and per-architecture manifests) on both Docker Hub and GHCR is keyless-signed with **Sigstore Cosign** (GitHub OIDC), attested with **SPDX** and **CycloneDX** SBOMs, and backed by **SLSA Build L3** provenance (`actions/attest-build-provenance`).
+
+### Verify image signature with Cosign
+
+```bash
+cosign verify \
+  --certificate-identity-regexp="^https://github\.com/dgcosenza/gitea-docker/\.github/workflows/daily\.yml@refs/heads/main$" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  ghcr.io/dgcosenza/gitea:latest
+
+# Or against Docker Hub (identical digest):
+cosign verify \
+  --certificate-identity-regexp="^https://github\.com/dgcosenza/gitea-docker/\.github/workflows/daily\.yml@refs/heads/main$" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  dgcosenza/gitea:latest
+```
+
+### Verify SPDX / CycloneDX SBOM attestations and SLSA Build Provenance
+
+```bash
+cosign verify-attestation \
+  --type spdxjson \
+  --certificate-identity-regexp="^https://github\.com/dgcosenza/gitea-docker/\.github/workflows/daily\.yml@refs/heads/main$" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  ghcr.io/dgcosenza/gitea@sha256:<arch-digest>
+
+gh attestation verify oci://ghcr.io/dgcosenza/gitea:latest --owner dgcosenza
+```
+
+---
+
 ## Security
 
 - **Vulnerability scan policy:** Every CI build verifies the upstream Gitea SHA-256, runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (`--only-fixed`, severity cutoff `high`, blocking gate), and emits an **SPDX SBOM** (`sbom.spdx.json`) and provenance artifact.
@@ -187,9 +230,11 @@ docker buildx build \
 
 ---
 
-## License and Credits
+## License
 
-- **Container packaging, `environment-to-ini`, entrypoint, CI, and documentation:** [MIT License](https://github.com/dgcosenza/gitea-docker/blob/main/LICENSE) — maintained by **Daniel G. Cosenza from FNX Labs**.
-- **Gitea:** [MIT License](https://github.com/go-gitea/gitea/blob/main/LICENSE) ([`go-gitea/gitea`](https://github.com/go-gitea/gitea)).
-- Full third-party notices: [`THIRD-PARTY-NOTICES.md`](https://github.com/dgcosenza/gitea-docker/blob/main/THIRD-PARTY-NOTICES.md).
-- Release history: [`CHANGELOG.md`](https://github.com/dgcosenza/gitea-docker/blob/main/CHANGELOG.md).
+This repository follows a clear packaging-vs-upstream license split:
+
+- **Container packaging, scripts, CI workflows, and documentation (`packaging: MIT`):** Licensed under the [MIT License](https://github.com/dgcosenza/gitea-docker/blob/main/LICENSE) — copyright **Daniel G. Cosenza from FNX Labs**.
+- **Bundled upstream software — Gitea (`go-gitea/gitea`) (`upstream: MIT`):** Gitea is licensed under the [MIT License](https://github.com/go-gitea/gitea/blob/main/LICENSE) ([`go-gitea/gitea`](https://github.com/go-gitea/gitea)).
+
+Full third-party notices are maintained in [`THIRD-PARTY-NOTICES.md`](https://github.com/dgcosenza/gitea-docker/blob/main/THIRD-PARTY-NOTICES.md). Release history is maintained in [`CHANGELOG.md`](https://github.com/dgcosenza/gitea-docker/blob/main/CHANGELOG.md).

@@ -1,13 +1,26 @@
-# Example Docker Compose configuration for dgcosenza/gitea
-# Replace 192.0.2.10 with your host's LAN IP and pin by @sha256 digest in production.
+# Hardened Docker Compose example for dgcosenza/gitea
+# Pin by @sha256 digest in production.
+# Available identically on Docker Hub (dgcosenza/gitea) and GHCR (ghcr.io/dgcosenza/gitea).
 
 services:
   gitea:
     image: dgcosenza/gitea:latest
     container_name: gitea
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+      - SYS_CHROOT
     security_opt:
       - no-new-privileges:true
+    tmpfs:
+      - /tmp:nosuid,size=128m
+      - /run/sshd:nosuid,size=8m
     ports:
       - "192.0.2.10:3080:3000"
       - "192.0.2.10:2223:22"
@@ -19,7 +32,6 @@ services:
       - GITEA__database__PATH=/data/gitea/gitea.db
       - GITEA__server__START_SSH_SERVER=false
       - GITEA__security__INSTALL_LOCK=true
-      - GITEA__service__DISABLE_REGISTRATION=true
     volumes:
       - ./data:/data
     healthcheck:
