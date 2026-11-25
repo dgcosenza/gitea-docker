@@ -5,7 +5,7 @@ ARG DEBIAN_BASE=debian:trixie-slim@sha256:8aa5a7bf5a1955bddbe7d74fcdd0b91ab30e74
 ARG GO_VERSION=1.27.4
 ARG GITEA_VERSION=28.4.0
 
-# ---- Stage 1: build static environment-to-ini helper & fetch SHA-256 verified Gitea binary ----
+# ---- Stage 1: build static environment-to-ini helper & compile Gitea from SHA-256-verified source ----
 FROM ${GO_BASE} AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -21,18 +21,42 @@ RUN apt-get update \
 WORKDIR /src/env2ini
 COPY tools/environment-to-ini/ ./
 
-# Build static helper and download official SHA-256-verified Gitea binary for TARGETARCH
-RUN set -eux; \
+# Build static environment-to-ini helper
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    set -eux; \
     ARCH="${TARGETARCH:-amd64}"; \
     CGO_ENABLED=0 GOOS=linux GOARCH="${ARCH}" GOTOOLCHAIN=local \
       go build -trimpath -ldflags="-s -w" -o /out/environment-to-ini ./main.go; \
+    chmod 0755 /out/environment-to-ini
+
+WORKDIR /src/gitea
+
+# Fetch official SHA-256-verified Gitea source archive (with prebuilt frontend assets),
+# patch vulnerable transitive Go modules, and compile static pure-Go Gitea binary
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    set -eux; \
+    ARCH="${TARGETARCH:-amd64}"; \
     BASE="https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}"; \
-    curl -fsSLo /out/gitea "${BASE}/gitea-${GITEA_VERSION}-linux-${ARCH}"; \
-    curl -fsSLo /tmp/gitea.sha256 "${BASE}/gitea-${GITEA_VERSION}-linux-${ARCH}.sha256"; \
-    EXPECTED="$(awk '{print $1}' /tmp/gitea.sha256)"; \
-    echo "${EXPECTED}  /out/gitea" | sha256sum -c -; \
-    chmod 0755 /out/gitea /out/environment-to-ini; \
-    rm -f /tmp/gitea.sha256
+    curl -fsSLo /tmp/gitea-src.tar.gz "${BASE}/gitea-src-${GITEA_VERSION}.tar.gz"; \
+    curl -fsSLo /tmp/gitea-src.tar.gz.sha256 "${BASE}/gitea-src-${GITEA_VERSION}.tar.gz.sha256"; \
+    EXPECTED="$(awk '{print $1}' /tmp/gitea-src.tar.gz.sha256)"; \
+    echo "${EXPECTED}  /tmp/gitea-src.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/gitea-src.tar.gz -C /src/gitea --strip-components=1; \
+    rm -rf /tmp/gitea-src.tar.gz /tmp/gitea-src.tar.gz.sha256 /src/gitea/vendor; \
+    GOTOOLCHAIN=local go get \
+      github.com/klauspost/compress@latest \
+      github.com/go-chi/chi/v5@latest \
+      golang.org/x/crypto@latest; \
+    TAGS="bindata timetzdata"; \
+    CGO_ENABLED=0 GOTOOLCHAIN=local go generate -tags "${TAGS}" ./...; \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${ARCH}" GOTOOLCHAIN=local \
+      go build -trimpath -tags "${TAGS}" \
+      -ldflags="-s -w -X 'main.Version=${GITEA_VERSION}' -X 'main.Tags=${TAGS}'" \
+      -o /out/gitea .; \
+    chmod 0755 /out/gitea; \
+    rm -rf /src/gitea/* /src/gitea/.[!.]*
 
 # ---- Stage 2: hardened Debian 13 (trixie-slim) Gitea + OpenSSH runtime ----
 FROM ${DEBIAN_BASE} AS runtime

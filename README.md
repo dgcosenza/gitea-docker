@@ -11,7 +11,7 @@
 [![Docker Image Size](https://img.shields.io/docker/image-size/dgcosenza/gitea/latest)](https://hub.docker.com/r/dgcosenza/gitea)
 [![Latest Release](https://img.shields.io/github/v/release/dgcosenza/gitea-docker?label=version)](https://github.com/dgcosenza/gitea-docker/releases)
 
-A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** packaging the official SHA-256-verified Gitea release alongside **OpenSSH**, `git`, `sqlite3`, and `GITEA__*` environment configuration support, maintained by **Daniel G. Cosenza from FNX Labs**.
+A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** compiling the official SHA-256-verified Gitea source release with the latest stable Go toolchain and security-patched Go dependencies alongside **OpenSSH**, `git`, `sqlite3`, and `GITEA__*` environment configuration support, maintained by **Daniel G. Cosenza from FNX Labs**.
 
 - **Docker Hub:** [`dgcosenza/gitea`](https://hub.docker.com/r/dgcosenza/gitea)
 - **GitHub Container Registry (GHCR):** [`ghcr.io/dgcosenza/gitea`](https://github.com/dgcosenza/gitea-docker/pkgs/container/gitea) (identical signed multi-arch digest)
@@ -204,7 +204,7 @@ docker buildx build \
 | Build Arg | Default | Purpose |
 | --- | --- | --- |
 | `GITEA_VERSION` | `28.4.0` | Official `go-gitea/gitea` release version (SHA-256 verified, overridden daily by CI). |
-| `GO_VERSION` | `1.27.4` | Go toolchain used to build the static `environment-to-ini` helper. |
+| `GO_VERSION` | `1.27.4` | Go toolchain used to compile Gitea and the static `environment-to-ini` helper. |
 | `DEBIAN_BASE` | `debian:trixie-slim` | Base OS image. |
 
 ---
@@ -214,7 +214,7 @@ docker buildx build \
 [`.github/workflows/daily.yml`](https://github.com/dgcosenza/gitea-docker/blob/main/.github/workflows/daily.yml) runs automatically every day at **05:05 UTC**, on pushes to `main`, on pull requests (verification only), and via `workflow_dispatch`. Every scheduled run executes a seven-step automated pipeline (gated by `.github/workflows/public-check.yml`):
 
 1. **Upstream check:** Queries `go-gitea/gitea` latest release via the authenticated GitHub API, resolves the latest stable Go toolchain and `debian:trixie-slim` digest, diffs against `versions.json`, and emits `upstream-changes.md`.
-2. **No-cache rebuild:** Rebuilds `linux/amd64` with `--no-cache` on schedule, verifies the official Gitea binary SHA-256, upgrades Debian 13 packages (`apt-get update && apt-get -y upgrade`), and emits an **SPDX SBOM** (`sbom.spdx.json`) and provenance artifact.
+2. **No-cache rebuild:** Rebuilds `linux/amd64` and `linux/arm64` natively with `--no-cache` on schedule, verifies the official Gitea source tarball SHA-256, updates vulnerable Go modules and compiles Gitea with the latest stable Go toolchain (`bindata timetzdata`), upgrades Debian 13 packages (`apt-get update && apt-get -y upgrade`), and emits **SPDX** and **CycloneDX** SBOMs plus provenance attestations.
 3. **Vulnerability fix and gate:** Runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (blocking `--only-fixed` gate, severity cutoff `high`), diffs findings against the previous scan, and retains reports for 90 days.
 4. **Smoke test:** Runs [`tests/smoke.sh`](https://github.com/dgcosenza/gitea-docker/blob/main/tests/smoke.sh) to verify Gitea version, `tini` PID 1, non-root `git` process, OpenSSH banner on port `22`, `GITEA__*` INI rendering, `/api/healthz` `pass`, and a negative closed-port check.
 5. **Publish:** On non-PR builds when Docker Hub secrets are configured, pushes `latest`, `<version>`, `<version>-<YYYYMMDD>`, and `sha-<short>` tags to Docker Hub and records the immutable digest.
@@ -226,7 +226,7 @@ docker buildx build \
 ## Design Decisions
 
 - **Debian 13 (`trixie-slim`) instead of upstream Alpine:** Upstream's official Docker image uses Alpine; migrating to Debian 13 (`trixie-slim`) standardizes glibc, OpenSSL 3, OpenSSH, and CA certificate security updates across the stack and eliminates Alpine `libxml2`/musl packaging lag.
-- **Official SHA-256-verified Gitea release binary + static Go `environment-to-ini`:** Verifies upstream's signed/checksummed release artifact while preserving full `GITEA__SECTION__KEY` and `*_FILE` drop-in compatibility.
+- **Source-built from official SHA-256-verified Gitea tarball + patched Go dependencies:** Compiles the official `gitea-src-<version>.tar.gz` archive (which ships prebuilt frontend assets) with the latest stable Go toolchain and up-to-date Go security fixes (such as `github.com/klauspost/compress`, `github.com/go-chi/chi/v5`, and `golang.org/x/crypto`), preventing prebuilt-binary transitive CVEs from blocking releases while preserving full `GITEA__SECTION__KEY` and `*_FILE` drop-in compatibility via our static Go `environment-to-ini` helper.
 
 ---
 
