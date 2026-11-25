@@ -46,9 +46,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     tar -xzf /tmp/gitea-src.tar.gz -C /src/gitea --strip-components=1; \
     rm -rf /tmp/gitea-src.tar.gz /tmp/gitea-src.tar.gz.sha256 /src/gitea/vendor; \
     GOTOOLCHAIN=local go get \
-      github.com/klauspost/compress@latest \
-      github.com/go-chi/chi/v5@latest \
-      golang.org/x/crypto@latest; \
+      github.com/klauspost/compress@v1.20.5 \
+      github.com/go-chi/chi/v5@v5.5.0 \
+      golang.org/x/crypto@v0.59.0; \
     TAGS="bindata timetzdata"; \
     CGO_ENABLED=0 GOTOOLCHAIN=local go generate -tags "${TAGS}" ./...; \
     CGO_ENABLED=0 GOOS=linux GOARCH="${ARCH}" GOTOOLCHAIN=local \
