@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Mai
 ---
 <!-- changelog:auto -->
 
+## [28.4.0] — 2026-11-25
+
+### Automated Daily Build
+- Verified components: Gitea `28.4.0`, Base OS `Debian 13.8 (trixie-slim)`.
+- Architectures verified: `linux/amd64, linux/arm64` (native smoke tests + Dive efficiency gate).
+- Upstream status: no new upstream release since previous build; refreshed base OS and dependencies.
+- Vulnerability gate: **0 fixable Critical/High** in Trivy and Grype (SBOM scan) (31 upstream-unfixed).
+- Published multi-arch digest (Docker Hub + GHCR): `dgcosenza/gitea@sha256:b513e3ed63ab0157324555979727e9a8850c7e322e66abb8f0bff51227106e38` (Cosign OIDC signed + SPDX/CycloneDX SBOM + SLSA L3 provenance).
+
+---
+
 ## [28.4.0] — 2026-11-24
 
 ### Added
