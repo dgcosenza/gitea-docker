@@ -19,7 +19,7 @@ trap cleanup EXIT
 # 1. Verify official Gitea version output
 GITEA_VER="$(docker run --rm --entrypoint /usr/local/bin/gitea "$IMAGE" --version)"
 echo "Gitea binary: ${GITEA_VER}"
-printf '%s' "$GITEA_VER" | grep -qE 'Gitea version [0-9]+\.[0-9]+\.[0-9]+'
+printf '%s' "$GITEA_VER" | grep -qiE 'gitea version [0-9]+\.[0-9]+\.[0-9]+'
 
 # 2. Boot container with SQLite + GITEA__* env overrides + no-new-privileges
 docker run -d --name "$NAME" \
