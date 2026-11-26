@@ -37,27 +37,35 @@ docker run -d --name "$NAME" \
   -v "${TMPDATA}:/data" \
   "$IMAGE"
 
-# 3. Wait for /api/healthz to return pass
-READY=0
-for _ in $(seq 1 45); do
+# 3. Wait for Docker's built-in HEALTHCHECK to report status=healthy
+HEALTH_STATUS=""
+for _ in $(seq 1 60); do
   if ! docker ps -q --filter "name=^/${NAME}$" | grep -q .; then
     echo "ERROR: gitea container exited prematurely:" >&2
     docker logs "$NAME" >&2 || true
     exit 1
   fi
-  HEALTH="$(docker exec "$NAME" wget -q -O - http://127.0.0.1:3000/api/healthz 2>/dev/null || true)"
-  if printf '%s' "$HEALTH" | grep -qE '"status"[[:space:]]*:[[:space:]]*"pass"'; then
-    READY=1
+  HEALTH_STATUS="$(docker inspect --format '{{.State.Health.Status}}' "$NAME" 2>/dev/null || echo starting)"
+  if [ "$HEALTH_STATUS" = "healthy" ]; then
     break
+  fi
+  if [ "$HEALTH_STATUS" = "unhealthy" ]; then
+    echo "ERROR: gitea container became unhealthy" >&2
+    docker inspect --format '{{json .State.Health}}' "$NAME" >&2 || true
+    docker logs "$NAME" >&2 || true
+    exit 1
   fi
   sleep 2
 done
-if [ "$READY" -ne 1 ]; then
-  echo "ERROR: Gitea /api/healthz did not pass within timeout." >&2
+if [ "$HEALTH_STATUS" != "healthy" ]; then
+  echo "ERROR: Gitea container did not reach Docker healthy status (last=${HEALTH_STATUS})." >&2
+  docker inspect --format '{{json .State.Health}}' "$NAME" >&2 || true
   docker logs "$NAME" >&2 || true
   exit 1
 fi
-echo "healthz: ${HEALTH}"
+HEALTH="$(docker exec "$NAME" wget -q -O - http://127.0.0.1:3000/api/healthz)"
+printf '%s' "$HEALTH" | grep -qE '"status"[[:space:]]*:[[:space:]]*"pass"'
+echo "healthz (${HEALTH_STATUS}): ${HEALTH}"
 
 # 4. Verify tini PID 1, non-root git Gitea process, and OpenSSH daemon listening on 22
 PID1_COMM="$(docker exec "$NAME" cat /proc/1/comm)"
