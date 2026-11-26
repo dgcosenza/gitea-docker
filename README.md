@@ -40,11 +40,11 @@ A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** c
 | Base OS | `Debian 13.8 (trixie-slim)` |
 | Architectures | `linux/amd64, linux/arm64` |
 | Uncompressed size (per arch) | `amd64: 128.8 MB, arm64: 363.9 MB` |
-| Last verified build (UTC) | `2026-11-25` |
-| Published multi-arch digest | `dgcosenza/gitea@sha256:abc02b0c673968e8e8dd310b64b8bb3cf6339935a4020fdaf4f5131f9bdbffcc` |
-| GHCR mirror | `ghcr.io/dgcosenza/gitea@sha256:abc02b0c673968e8e8dd310b64b8bb3cf6339935a4020fdaf4f5131f9bdbffcc` |
+| Last verified build (UTC) | `2026-11-26` |
+| Published multi-arch digest | `dgcosenza/gitea@sha256:fb49816f1b020bfde0d20f806546d4d8aa367f7fcf4f78ff1f2deceb30b5d84d` |
+| GHCR mirror | `ghcr.io/dgcosenza/gitea@sha256:fb49816f1b020bfde0d20f806546d4d8aa367f7fcf4f78ff1f2deceb30b5d84d` |
 | Supply chain | Cosign OIDC signed + SPDX & CycloneDX SBOM attestations + SLSA Build L3 provenance |
-| Security gate (Trivy + Grype on SBOM) | **0 fixable findings of any severity** (31 upstream-unfixed) |
+| Security gate (Trivy + Grype on SBOM) | **0 fixable Critical/High** (31 upstream-unfixed) |
 <!-- versions:end -->
 
 ---
