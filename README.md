@@ -27,7 +27,7 @@ A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** c
 
 - **Drop-in `/data` & env compatibility:** Preserves `/data/gitea`, `/data/git`, `/data/ssh`, `USER_UID`/`USER_GID` (default `1000:1000`, user `git`), OpenSSH on port `22`, HTTP on port `3000`, `GITEA__SECTION__KEY` (and `*_FILE`) environment overrides via a static `environment-to-ini` binary, and `/api/healthz` healthchecks.
 - **Hardened runtime:** Runs `tini` as PID 1, executes `gitea web` as non-root `git` via `setpriv` (fully compatible with `security_opt: no-new-privileges:true`), disables SSH password/root login, and ships an up-to-date Debian 13 CA certificate bundle.
-- **Daily CVE-gated rebuilds (all severities with a fix):** Rebuilds daily with `--no-cache`, upgrades all Debian 13 packages (including OpenSSH, Git, OpenSSL, and CA certificates), tracks the latest official `go-gitea/gitea` release with SHA-256 verification, and enforces **0 fixable findings of any severity** findings in both Trivy and Grype.
+- **Daily CVE-gated rebuilds (all severities with a fix):** Rebuilds daily with `--no-cache`, upgrades all Debian 13 packages (including OpenSSH, Git, OpenSSL, and CA certificates), tracks the latest official `go-gitea/gitea` release with SHA-256 verification, and enforces **0 fixable findings of any severity** in both Trivy and Grype.
 
 ---
 
@@ -185,7 +185,7 @@ gh attestation verify oci://ghcr.io/dgcosenza/gitea:latest --owner dgcosenza
 ## Security
 
 - **Vulnerability scan policy (all severities with a fix):** Every CI build verifies the upstream Gitea SHA-256, runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (`--only-fixed`, severity cutoff `negligible`, blocking gate), and emits an **SPDX SBOM** (`sbom.spdx.json`) and provenance artifact.
-- **Current status:** **0 fixable findings of any severity** vulnerabilities across Debian 13 OS packages and Gitea.
+- **Current status:** **0 fixable vulnerabilities of any severity** across Debian 13 OS packages and Gitea.
 - **Hardening:** `tini` PID 1, `no-new-privileges:true` compatible via `setpriv`, OpenSSH restricted to `AllowUsers git` with key-only auth (`PasswordAuthentication no`, `PermitRootLogin no`).
 - See [`SECURITY.md`](https://github.com/dgcosenza/gitea-docker/blob/main/SECURITY.md).
 
