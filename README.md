@@ -27,7 +27,7 @@ A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** c
 
 - **Drop-in `/data` & env compatibility:** Preserves `/data/gitea`, `/data/git`, `/data/ssh`, `USER_UID`/`USER_GID` (default `1000:1000`, user `git`), OpenSSH on port `22`, HTTP on port `3000`, `GITEA__SECTION__KEY` (and `*_FILE`) environment overrides via a static `environment-to-ini` binary, and `/api/healthz` healthchecks.
 - **Hardened runtime:** Runs `tini` as PID 1, executes `gitea web` as non-root `git` via `setpriv` (fully compatible with `security_opt: no-new-privileges:true`), disables SSH password/root login, and ships an up-to-date Debian 13 CA certificate bundle.
-- **Daily CVE-gated rebuilds:** Rebuilds daily with `--no-cache`, upgrades all Debian 13 packages (including OpenSSH, Git, OpenSSL, and CA certificates), tracks the latest official `go-gitea/gitea` release with SHA-256 verification, and enforces **0 fixable Critical/High** findings in both Trivy and Grype.
+- **Daily CVE-gated rebuilds (all severities with a fix):** Rebuilds daily with `--no-cache`, upgrades all Debian 13 packages (including OpenSSH, Git, OpenSSL, and CA certificates), tracks the latest official `go-gitea/gitea` release with SHA-256 verification, and enforces **0 fixable findings of any severity** findings in both Trivy and Grype.
 
 ---
 
@@ -44,7 +44,7 @@ A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** c
 | Published multi-arch digest | `dgcosenza/gitea@sha256:abc02b0c673968e8e8dd310b64b8bb3cf6339935a4020fdaf4f5131f9bdbffcc` |
 | GHCR mirror | `ghcr.io/dgcosenza/gitea@sha256:abc02b0c673968e8e8dd310b64b8bb3cf6339935a4020fdaf4f5131f9bdbffcc` |
 | Supply chain | Cosign OIDC signed + SPDX & CycloneDX SBOM attestations + SLSA Build L3 provenance |
-| Security gate (Trivy + Grype on SBOM) | **0 fixable Critical/High** (31 upstream-unfixed) |
+| Security gate (Trivy + Grype on SBOM) | **0 fixable findings of any severity** (31 upstream-unfixed) |
 <!-- versions:end -->
 
 ---
@@ -184,8 +184,8 @@ gh attestation verify oci://ghcr.io/dgcosenza/gitea:latest --owner dgcosenza
 
 ## Security
 
-- **Vulnerability scan policy:** Every CI build verifies the upstream Gitea SHA-256, runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (`--only-fixed`, severity cutoff `high`, blocking gate), and emits an **SPDX SBOM** (`sbom.spdx.json`) and provenance artifact.
-- **Current status:** **0 fixable Critical/High** vulnerabilities across Debian 13 OS packages and Gitea.
+- **Vulnerability scan policy (all severities with a fix):** Every CI build verifies the upstream Gitea SHA-256, runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (`--only-fixed`, severity cutoff `negligible`, blocking gate), and emits an **SPDX SBOM** (`sbom.spdx.json`) and provenance artifact.
+- **Current status:** **0 fixable findings of any severity** vulnerabilities across Debian 13 OS packages and Gitea.
 - **Hardening:** `tini` PID 1, `no-new-privileges:true` compatible via `setpriv`, OpenSSH restricted to `AllowUsers git` with key-only auth (`PasswordAuthentication no`, `PermitRootLogin no`).
 - See [`SECURITY.md`](https://github.com/dgcosenza/gitea-docker/blob/main/SECURITY.md).
 
@@ -220,7 +220,7 @@ docker buildx build \
 
 1. **Upstream check:** Queries `go-gitea/gitea` latest release via the authenticated GitHub API, resolves the latest stable Go toolchain and `debian:trixie-slim` digest, diffs against `versions.json`, and emits `upstream-changes.md`.
 2. **No-cache rebuild:** Rebuilds `linux/amd64` and `linux/arm64` natively with `--no-cache` on schedule, verifies the official Gitea source tarball SHA-256, updates vulnerable Go modules and compiles Gitea with the latest stable Go toolchain (`bindata timetzdata`), upgrades Debian 13 packages (`apt-get update && apt-get -y upgrade`), and emits **SPDX** and **CycloneDX** SBOMs plus provenance attestations.
-3. **Vulnerability fix and gate:** Runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (blocking `--only-fixed` gate, severity cutoff `high`), diffs findings against the previous scan, and retains reports for 90 days.
+3. **Vulnerability fix and gate:** Runs **Trivy** (table, JSON, SARIF upload, blocking `--ignore-unfixed` gate) and **Grype** (blocking `--only-fixed` gate, severity cutoff `negligible`), diffs findings against the previous scan, and retains reports for 90 days.
 4. **Smoke test:** Runs [`tests/smoke.sh`](https://github.com/dgcosenza/gitea-docker/blob/main/tests/smoke.sh) to verify Gitea version, `tini` PID 1, non-root `git` process, OpenSSH banner on port `22`, `GITEA__*` INI rendering, `/api/healthz` `pass`, and a negative closed-port check.
 5. **Publish:** On non-PR builds when Docker Hub secrets are configured, pushes `latest`, `<version>`, `<version>-<YYYYMMDD>`, and `sha-<short>` tags to Docker Hub and records the immutable digest.
 6. **Automated documentation sync:** Commits updated `versions.json`, the README `Current Versions` block, and a dated `CHANGELOG.md` entry via `github-actions[bot]` with `[skip ci]` when content changes, then syncs the Docker Hub overview via `peter-evans/dockerhub-description`.
