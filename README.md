@@ -41,9 +41,9 @@ A hardened, drop-in **Gitea** container image on **Debian 13 (`trixie-slim`)** c
 | Base OS | `Debian 13.8 (trixie-slim)` |
 | Architectures | `linux/amd64, linux/arm64` |
 | Uncompressed size (per arch) | `amd64: 128.8 MB, arm64: 363.9 MB` |
-| Last verified build (UTC) | `2026-11-26` |
-| Published multi-arch digest | `dgcosenza/gitea@sha256:3c370e901652036f44adbfac8c0d0ff5a1fb3a947ff5d56a2c979fdf368fa726` |
-| GHCR mirror | `ghcr.io/dgcosenza/gitea@sha256:3c370e901652036f44adbfac8c0d0ff5a1fb3a947ff5d56a2c979fdf368fa726` |
+| Last verified build (UTC) | `2026-11-27` |
+| Published multi-arch digest | `dgcosenza/gitea@sha256:81ac30f587ec0f8543564765401ae73fae033901054c3fa009c4a5ee83a66c75` |
+| GHCR mirror | `ghcr.io/dgcosenza/gitea@sha256:81ac30f587ec0f8543564765401ae73fae033901054c3fa009c4a5ee83a66c75` |
 | Supply chain | Cosign OIDC signed + SPDX & CycloneDX SBOM attestations + SLSA Build L3 provenance |
 | Security gate (Trivy + Grype on SBOM) | **0 fixable findings of any severity** (31 upstream-unfixed) |
 <!-- versions:end -->
